@@ -1,7 +1,7 @@
 var width = $(document).width(),     // svg width
     height = $(document).height(),     // svg height
     dr = 15,      // default point radius
-    off = 15,    // cluster hull offset
+    off = dr,    // cluster hull offset
     expand = {}, // expanded clusters
     data, net, force, hullg, hull, linkg, link, nodeg, node;
 
@@ -72,8 +72,11 @@ function network(data, prev, index, expand) {
             // the node should be directly visible
             nm[n.name] = nodes.length;
             nodes.push(n);
-            n.width = n.height = 8 * 2;
+            if (!n.lable) {
+                n.lable = random.first();
 
+            }
+            n.width = n.height = 8 * 2;
             if (gn[i]) {
                 // place new nodes at cluster location (plus jitter)
                 n.x = gn[i].x + Math.random();
@@ -85,6 +88,11 @@ function network(data, prev, index, expand) {
                 // if new cluster, add to set and position at centroid of leaf nodes
                 nm[i] = nodes.length;
                 nodes.push(l);
+
+                if (!n.lable) {
+                    l.lable = random.first();
+
+                }
                 l.width = l.height = 8 * 2;
                 if (gc[i]) {
                     l.x = gc[i].x / gc[i].count;
@@ -191,7 +199,7 @@ function init() {
         .links(net.links)
         .size([width, height])
         // .constraints(graph.constraints)
-        //.symmetricDiffLinkLengths(20)
+        .symmetricDiffLinkLengths(50)
         .jaccardLinkLengths(100)
         .avoidOverlaps(true)
         .handleDisconnected(true)
@@ -237,8 +245,14 @@ function init() {
         .attr("y2", function (d) {
             return d.target.y;
         })
+        .style("stroke", function (d) {
+            return random.color();
+        })
         .style("stroke-width", function (d) {
             return 1;
+        })
+        .style("opacity", function (d) {
+            return .5;
         });
 
     node = nodeg.selectAll("g.node").data(net.nodes, nodeid);
@@ -270,7 +284,7 @@ function init() {
             return "#000";
         })
         .style("stroke-width", function (d) {
-            return "2px";
+            return "1px";
         });
 
 
@@ -304,7 +318,7 @@ function init() {
         .attr("fill", "black")
         .text(function (d, i) {
 
-            return random.first();
+            return d.lable;
         });
 
     node.call(force.drag);
