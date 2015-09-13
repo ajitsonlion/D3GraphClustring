@@ -74,6 +74,8 @@ function network(data, prev, index, expand) {
             nodes.push(n);
             if (!n.lable) {
                 n.lable = random.first();
+                n.icon = pickRandomIcon();
+                n.color = random.color();
 
             }
             n.width = n.height = 8 * 2;
@@ -91,6 +93,8 @@ function network(data, prev, index, expand) {
 
                 if (!n.lable) {
                     l.lable = random.first();
+                    l.icon = pickRandomIcon();
+                    l.color = random.color();
 
                 }
                 l.width = l.height = 8 * 2;
@@ -168,7 +172,7 @@ var vis = body.append("svg")
     .attr("width", width)
     .attr("height", height);
 
-d3.json("js/data.json", function (json) {
+d3.json("js/data1.json", function (json) {
     data = json;
     for (var i = 0; i < data.links.length; ++i) {
         o = data.links[i];
@@ -199,12 +203,12 @@ function init() {
         .links(net.links)
         .size([width, height])
         // .constraints(graph.constraints)
-        .symmetricDiffLinkLengths(50)
-        .jaccardLinkLengths(100)
+        .symmetricDiffLinkLengths(120)
+        .jaccardLinkLengths(120)
         .avoidOverlaps(true)
         .handleDisconnected(true)
         // .linkDistance(100)
-        .start();
+        .start(0, 500, 0);
 
     //  .linkStrength(1)
     // .gravity(0.05)   // gravity+charge tweaked to ensure good 'grouped' view (e.g. green group not smack between blue&orange, ...
@@ -275,7 +279,7 @@ function init() {
             return d.size ? ~~Math.log(d.size * d.link_count) * 2 + dr : Math.floor((Math.random() * 5) + 1) + dr + 1;
         })
         .style("fill", function (d) {
-            return random.color();
+            return fill(d.group);
         })
         .style("opacity", function (d) {
             return 1;
@@ -294,12 +298,12 @@ function init() {
         .style('font-family', 'FontAwesome')
         .style('font-size', '20px')
         .style("fill", function (d) {
-            return random.color();
+            return d.color;
         })
         .text(function (d) {
 
 
-            return pickRandomIcon();
+            return d.icon;
         });
 
 
