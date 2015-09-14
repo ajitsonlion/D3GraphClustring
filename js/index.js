@@ -386,7 +386,7 @@ function init() {
     var tick = function () {
         if (!hull.empty()) {
             hull.data(convexHulls(net.nodes, getGroup, off))
-                .transition().duration(animationDuration)
+                .transition().duration(animationDuration *.5)
                 .attr("d", drawCluster)
                 .ease("elastic");
         }
