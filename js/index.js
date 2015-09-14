@@ -9,6 +9,9 @@ var curve = d3.svg.line()
     .interpolate("cardinal-closed")
     .tension(1);
 
+var animationDuration = 1500;
+var length=150;
+
 var fill = d3.scale.category20();
 
 var random = new Chance();
@@ -91,12 +94,12 @@ function network(data, prev, index, expand) {
                 nm[i] = nodes.length;
                 nodes.push(l);
 
-                if (!n.lable) {
-                    l.lable = random.first();
-                    l.icon = pickRandomIcon();
-                    l.color = random.color();
 
-                }
+                l.lable = "Group " + n.group;
+                l.icon = FONT_AWESOME.folder;
+                l.color = fill(n.group);
+
+
                 l.width = l.height = 8 * 2;
                 if (gc[i]) {
                     l.x = gc[i].x / gc[i].count;
@@ -203,12 +206,12 @@ function init() {
         .links(net.links)
         .size([width, height])
         // .constraints(graph.constraints)
-        .symmetricDiffLinkLengths(120)
-        .jaccardLinkLengths(120)
+        .symmetricDiffLinkLengths(length)
+        .jaccardLinkLengths(length)
         .avoidOverlaps(true)
         .handleDisconnected(true)
         // .linkDistance(100)
-        .start(0, 500, 0);
+        .start(0, 0, 0);
 
     //  .linkStrength(1)
     // .gravity(0.05)   // gravity+charge tweaked to ensure good 'grouped' view (e.g. green group not smack between blue&orange, ...
@@ -217,9 +220,9 @@ function init() {
     // .start();
 
     hullg.selectAll("path.hull").remove();
-    hull = hullg.selectAll("path.hull")
-        .data(convexHulls(net.nodes, getGroup, off))
-        .enter().append("path")
+    hull = hullg.selectAll("path.hull").data(convexHulls(net.nodes, getGroup, off));
+
+    hull.enter().append("path")
         .attr("class", "hull")
 
         .attr("d", drawCluster)
@@ -229,6 +232,7 @@ function init() {
         })
         .on("dblclick", function (d) {
             console.log("hull dblclick", d, arguments, this, expand[d.group]);
+
             expand[d.group] = false;
             init();
         });
@@ -236,27 +240,40 @@ function init() {
     link = linkg.selectAll("line.link").data(net.links, linkid);
     link.exit().remove();
     link.enter().append("line")
+
         .attr("class", "link")
+
         .attr("x1", function (d) {
             return d.source.x;
         })
+
         .attr("y1", function (d) {
             return d.source.y;
         })
+
         .attr("x2", function (d) {
             return d.target.x;
         })
+
         .attr("y2", function (d) {
             return d.target.y;
         })
+
         .style("stroke", function (d) {
             return random.color();
         })
+
         .style("stroke-width", function (d) {
             return 1;
         })
+
         .style("opacity", function (d) {
-            return .5;
+            return 0;
+        })
+        .transition().duration(animationDuration)
+
+        .style("opacity", function (d) {
+            return 1;
         });
 
     node = nodeg.selectAll("g.node").data(net.nodes, nodeid);
@@ -266,6 +283,7 @@ function init() {
     // NEW HERE
     var g = onEnter
         .append("g")
+
         .attr("class", function (d) {
             return "node" + (d.size ? "" : " leaf");
         })
@@ -275,15 +293,27 @@ function init() {
 
 
     g.append('svg:circle')
+
         .attr("r", function (d) {
-            return d.size ? ~~Math.log(d.size * d.link_count) * 2 + dr : Math.floor((Math.random() * 5) + 1) + dr + 1;
+            var num = d.size ? ~~Math.log(d.size * d.link_count) * 2 + dr : Math.floor((Math.random() * 10) + 1) + dr + 1;
+            d.fontSize = ~~(num * .9) + 5;
+            return num;
         })
+
         .style("fill", function (d) {
             return fill(d.group);
         })
+
+        .style("opacity", function (d) {
+            return 0;
+        })
+        .transition().duration(animationDuration)
+
         .style("opacity", function (d) {
             return 1;
         })
+        .ease("elastic")
+
         .style("stroke", function (d) {
             return "#000";
         })
@@ -293,12 +323,23 @@ function init() {
 
 
     g.append('text')
-        .attr('text-anchor', 'middle')
+
+        .style("opacity", function (d) {
+            return 0;
+        })
+        .transition().duration(animationDuration *.5)
+
+        .style("opacity", function (d) {
+            return 1;
+        })
+         .attr('text-anchor', 'middle')
         .attr('dominant-baseline', 'central')
         .style('font-family', 'FontAwesome')
-        .style('font-size', '20px')
+        .style('font-size', function (d) {
+            return d.fontSize;
+        })
         .style("fill", function (d) {
-            return d.color;
+            return "#FFF";
         })
         .text(function (d) {
 
@@ -312,25 +353,42 @@ function init() {
     })
         .on("dblclick", function (d) {
             console.log("node dblclick", d, arguments, this, expand[d.group]);
+
+
             expand[d.group] = !expand[d.group];
             init();
+
+
         });
     g.append("text")
         . attr("dx", function (d) {
-            return 20;
+            return ~~(d.fontSize * 1.5);
+        })
+        .style("opacity", function (d) {
+            return 0;
+        })
+        .transition().duration(animationDuration)
+
+        .style("opacity", function (d) {
+            return 1;
+        })
+
+        .style('font-size', function (d) {
+            return ~~(d.fontSize * .7);
         })
         .attr("fill", "black")
+
         .text(function (d, i) {
 
             return d.lable;
         });
 
-    node.call(force.drag);
-
-    force.on("tick", function () {
+    var tick = function () {
         if (!hull.empty()) {
             hull.data(convexHulls(net.nodes, getGroup, off))
-                .attr("d", drawCluster);
+                .transition().duration(animationDuration)
+                .attr("d", drawCluster)
+                .ease("elastic");
         }
 
         link.attr("x1", function (d) {
@@ -349,5 +407,11 @@ function init() {
         node.attr("transform", function (d) {
             return "translate(" + d.x + "," + d.y + ")";
         });
+    };
+    node.call(force.drag);
+    force.on("tick", function () {
+        setTimeout(tick, 0)
     });
+
+
 }
