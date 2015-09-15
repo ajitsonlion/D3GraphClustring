@@ -9,8 +9,8 @@ var curve = d3.svg.line()
     .interpolate("cardinal-closed")
     .tension(1);
 
-var animationDuration = 1500;
-var length=150;
+var animationTime = 1500;
+var length = 150;
 
 var fill = d3.scale.category20();
 
@@ -79,6 +79,9 @@ function network(data, prev, index, expand) {
                 n.lable = random.first();
                 n.icon = pickRandomIcon();
                 n.color = random.color();
+                n.iconColor = random.color();
+                n.isCluster = false;
+
 
             }
             n.width = n.height = 8 * 2;
@@ -93,13 +96,10 @@ function network(data, prev, index, expand) {
                 // if new cluster, add to set and position at centroid of leaf nodes
                 nm[i] = nodes.length;
                 nodes.push(l);
-
-
                 l.lable = "Group " + n.group;
                 l.icon = FONT_AWESOME.folder;
                 l.color = fill(n.group);
-
-
+                l.isCluster = true;
                 l.width = l.height = 8 * 2;
                 if (gc[i]) {
                     l.x = gc[i].x / gc[i].count;
@@ -189,9 +189,9 @@ d3.json("js/data1.json", function (json) {
 
     init();
 
-    vis.attr("opacity", 1e-6)
+    vis.attr("opacity", 0)
         .transition()
-        .duration(1000)
+        .duration(5000)
         .attr("opacity", 1);
 });
 
@@ -233,6 +233,7 @@ function init() {
         .on("dblclick", function (d) {
             console.log("hull dblclick", d, arguments, this, expand[d.group]);
 
+
             expand[d.group] = false;
             init();
         });
@@ -240,6 +241,7 @@ function init() {
     link = linkg.selectAll("line.link").data(net.links, linkid);
     link.exit().remove();
     link.enter().append("line")
+        .transition()
 
         .attr("class", "link")
 
@@ -260,7 +262,7 @@ function init() {
         })
 
         .style("stroke", function (d) {
-            return random.color();
+            return fill(d.source.group);
         })
 
         .style("stroke-width", function (d) {
@@ -270,10 +272,9 @@ function init() {
         .style("opacity", function (d) {
             return 0;
         })
-        .transition().duration(animationDuration)
 
         .style("opacity", function (d) {
-            return 1;
+            return .5;
         });
 
     node = nodeg.selectAll("g.node").data(net.nodes, nodeid);
@@ -293,7 +294,7 @@ function init() {
 
 
     g.append('svg:circle')
-
+        .transition()
         .attr("r", function (d) {
             var num = d.size ? ~~Math.log(d.size * d.link_count) * 2 + dr : Math.floor((Math.random() * 10) + 1) + dr + 1;
             d.fontSize = ~~(num * .9) + 5;
@@ -301,51 +302,51 @@ function init() {
         })
 
         .style("fill", function (d) {
-            return fill(d.group);
+            return d.isCluster ? "rgba(0, 0, 0, 0.0)" : fill(d.group);
+
         })
 
         .style("opacity", function (d) {
             return 0;
         })
-        .transition().duration(animationDuration)
 
         .style("opacity", function (d) {
             return 1;
         })
-        .ease("elastic")
 
         .style("stroke", function (d) {
-            return "#000";
+            return d.isCluster ? "rgba(0, 0, 0, 0.0)" : "#000";
         })
         .style("stroke-width", function (d) {
-            return "1px";
-        });
+            return d.isCluster ? "0px" : "1px";
+        })
+        .ease("elastic");
 
 
     g.append('text')
 
-        .style("opacity", function (d) {
-            return 0;
-        })
-        .transition().duration(animationDuration *.5)
+
+        .transition()
 
         .style("opacity", function (d) {
             return 1;
         })
-         .attr('text-anchor', 'middle')
+        .attr('text-anchor', 'middle')
         .attr('dominant-baseline', 'central')
         .style('font-family', 'FontAwesome')
         .style('font-size', function (d) {
-            return d.fontSize;
+            return d.isCluster ? ~~(d.fontSize * 1.8) : d.fontSize;
         })
         .style("fill", function (d) {
-            return "#FFF";
+
+            return d.isCluster ? fill(d.group) : "#FFF";
         })
         .text(function (d) {
 
 
             return d.icon;
-        });
+        })
+        .ease("elastic");
 
 
     g.on("click", function (d) {
@@ -354,20 +355,17 @@ function init() {
         .on("dblclick", function (d) {
             console.log("node dblclick", d, arguments, this, expand[d.group]);
 
-
             expand[d.group] = !expand[d.group];
             init();
-
-
         });
     g.append("text")
         . attr("dx", function (d) {
-            return ~~(d.fontSize * 1.5);
+            return ~~(d.fontSize * 1.2);
         })
         .style("opacity", function (d) {
             return 0;
         })
-        .transition().duration(animationDuration)
+        .transition().duration(animationTime)
 
         .style("opacity", function (d) {
             return 1;
@@ -382,11 +380,12 @@ function init() {
 
             return d.lable;
         });
+    node.call(force.drag);
 
     var tick = function () {
         if (!hull.empty()) {
             hull.data(convexHulls(net.nodes, getGroup, off))
-                .transition().duration(animationDuration *.5)
+                .transition().duration(animationTime)
                 .attr("d", drawCluster)
                 .ease("elastic");
         }
@@ -407,11 +406,18 @@ function init() {
         node.attr("transform", function (d) {
             return "translate(" + d.x + "," + d.y + ")";
         });
-    };
-    node.call(force.drag);
-    force.on("tick", function () {
-        setTimeout(tick, 0)
-    });
 
+        return false;
+    };
+    d3.timer(tick, 0);
+
+
+    /*
+
+     force.on("tick", function () {
+     setTimeout(tick, 0)
+     });
+
+     */
 
 }
