@@ -12,6 +12,9 @@ var curve = d3.svg.line()
 var animationTime = 1500;
 var length = 150;
 
+var linkedByIndex = {};
+
+
 var fill = d3.scale.category20();
 
 var random = new Chance();
@@ -135,6 +138,12 @@ function network(data, prev, index, expand) {
     for (i in lm) {
         links.push(lm[i]);
     }
+    links.forEach(function(d) {
+        linkedByIndex[d.source.index + "," + d.target.index] = 1;
+        linkedByIndex[d.target.index + "," + d.source.index] = 1;
+
+    });
+
 
     return {nodes: nodes, links: links};
 }
@@ -191,13 +200,14 @@ d3.json("js/data1.json", function (json) {
 
     vis.attr("opacity", 0)
         .transition()
-        .duration(5000)
+        .duration(2000)
         .attr("opacity", 1);
 });
 
 function init() {
     if (force) force.stop();
 
+    linkedByIndex={};
     net = network(data, net, getGroup, expand);
 
     console.log(data.nodes.length);
@@ -241,7 +251,6 @@ function init() {
     link = linkg.selectAll("line.link").data(net.links, linkid);
     link.exit().remove();
     link.enter().append("line")
-        .transition()
 
         .attr("class", "link")
 
@@ -272,10 +281,13 @@ function init() {
         .style("opacity", function (d) {
             return 0;
         })
+        .transition().duration(animationTime)
 
         .style("opacity", function (d) {
             return .5;
-        });
+        })
+        .ease("elastic");
+
 
     node = nodeg.selectAll("g.node").data(net.nodes, nodeid);
     node.exit().remove();
@@ -294,7 +306,7 @@ function init() {
 
 
     g.append('svg:circle')
-        .transition()
+        .transition().duration(animationTime)
         .attr("r", function (d) {
             var num = d.size ? ~~Math.log(d.size * d.link_count) * 2 + dr : Math.floor((Math.random() * 10) + 1) + dr + 1;
             d.fontSize = ~~(num * .9) + 5;
@@ -324,9 +336,11 @@ function init() {
 
 
     g.append('text')
+        .attr("class", "nodeIcon")
 
 
-        .transition()
+        .style("opacity", 0)
+        .transition().duration(animationTime)
 
         .style("opacity", function (d) {
             return 1;
@@ -380,6 +394,8 @@ function init() {
 
             return d.lable;
         });
+
+
     node.call(force.drag);
 
     var tick = function () {
@@ -409,15 +425,14 @@ function init() {
 
         return false;
     };
-    d3.timer(tick, 0);
+    //d3.timer(tick, 0);
 
+    function neighboring(a, b) {
+        return linkedByIndex[a.index + "," + b.index];
+    }
+    force.on("tick", function () {
+        setTimeout(tick, 0)
+    });
 
-    /*
-
-     force.on("tick", function () {
-     setTimeout(tick, 0)
-     });
-
-     */
 
 }
